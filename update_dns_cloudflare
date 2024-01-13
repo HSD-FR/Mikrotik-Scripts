@@ -1,0 +1,76 @@
+#update DNS CLOUDFLARE
+
+:local zoneid "xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+:local token "xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+:local ttl "60"
+:local prox false
+
+:local date [/system clock get date]
+:local itime  [/system clock get time]
+             
+:local now "$date $itime"
+
+# Get System Identity #
+:local SystemID [/system identity get name];
+
+
+#____________________________Resolve & update entry 1 IPv4_______________________________________	
+
+#define current record IP in DNS 
+
+:global IP4FTTHCUR
+:local recidftth4 "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+:local nameftth4 "entry1.foo.me"
+:set IP4FTTHCUR [:resolve $nameftth4]
+
+#define real current IP
+
+:global IP4FTTHNEW
+:local requestip [tool fetch url="https://text.ipv4.wtfismyip.com" mode=https output=user as-value]
+:set IP4FTTHNEW [:pick ($requestip->"data") 0 ([:len ($requestip->"data")]-1)]
+
+#update cloudflare
+
+:if ($IP4FTTHNEW != $IP4FTTHCUR) do={
+	:log info "CF-DDNS: Public IP changed to $IP4FTTHNEW, updating"
+	/tool fetch http-method=put mode=https \
+	url="https://api.cloudflare.com/client/v4/zones/$zoneid/dns_records/$recidftth4" output=user as-value \
+	http-header-field="Authorization: Bearer $token,Content-Type: application/json" \
+	http-data="{\"type\":\"A\",\"name\":\"$nameftth4\",\"content\":\"$IP4FTTHNEW\",\"ttl\":$ttl,\"proxied\":false,\"comment\":\"Updated by $SystemID script each 5 min $now\"}"
+	:set IP4FTTHCUR $IP4FTTHNEW
+	:log info "CF-DDNS: Host $nameftth4 updated with IP $IP4FTTHNEW"
+} else={
+	:log info "CF-DDNS: Previous IP $IP4FTTHNEW not changed, quitting"
+}
+
+#____________________________End resolve & update Entry 1 FTTH IPv4___________________________________
+
+#____________________________Resolve & update entry 2 FTTH IPv6_______________________________________
+
+#define current record IP in DNS 
+
+:global IP6FTTHCUR
+:local recidftth6 "xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+:local nameftth6 "entry2.foo.me"
+:set IP6FTTHCUR [:resolve $nameftth6]
+
+#define real current IP
+:global IP6FTTHNEW
+:local requestip6  [tool fetch url="https://text.ipv6.wtfismyip.com" mode=https output=user as-value];
+:set IP6FTTHNEW [:pick ($requestip6->"data") 0 ([:len ($requestip6->"data")]-1)];
+
+#update cloudflare
+
+:if ($IP6FTTHNEW != $IP6FTTHCUR) do={
+	:log info "CF-DDNS: Public IP changed to $IP6FTTHNEW, updating"
+	/tool fetch http-method=put mode=https \
+	url="https://api.cloudflare.com/client/v4/zones/$zoneid/dns_records/$recidftth6" output=user as-value \
+	http-header-field="Authorization: Bearer $token,Content-Type: application/json" \
+	http-data="{\"type\":\"AAAA\",\"name\":\"$nameftth6\",\"content\":\"$IP6FTTHNEW\",\"ttl\":$ttl,\"proxied\":false,\"comment\":\"Updated by $SystemID script each 5 min $now\"}"
+	:set IP6FTTHCUR $IP6FTTHNEW
+	:log info "CF-DDNS: Host $nameftth6 updated with IP $IP6FTTHNEW"
+} else={
+	:log info "CF-DDNS: Previous IP $IP6FTTHNEW not changed, quitting"
+}
+
+#____________________________Resolve & update entry 2 FTTH IPv6_______________________________________
