@@ -1,0 +1,13 @@
+# This script to update address lists. Example to allow a firewall rule with a specific dynimic IP
+# before you have to add each entry
+
+#/ip firewall address-list add address=90.90.90.90 comment=name1 list=VPN-authorized
+#/ipv6 firewall address-list add address=2001:0000:0000:0000:: comment=name2 list=VPN-authorized
+
+#____________________________Resolve and update list name1 FTTH IPv4______________________________________________
+
+/ip firewall address-list set [find comment="name1"] address= [:resolve v4.foo.me];
+
+#____________________________Resolve and update list name2 FTTH IPv6______________________________________________
+
+/ipv6 firewall address-list set [find comment="name2"] address=[:resolve v6.foo.me];
