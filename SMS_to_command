@@ -3,7 +3,7 @@
 
 :if ([/system script job print count-only where script="SMS2EXEC"] < 2) do={
 
-:local number1 "+33xxxxxxxxx";
+:local number1 "+33xxxxxxxxx"; #your mobile number
 :local smsPhone;
 :local smsTimeStamp;
 :local smsMessage;
