@@ -1,0 +1,38 @@
+# 3 way to resolve name or find an IP 
+
+#resolve name simply
+
+:local resolvename [:resolve douy.hsd.me]
+
+#$resolvename is an IP
+#____________________________________________________
+
+#find your IP
+#IP v4
+:local resolvename [tool fetch url="https://ipv4.icanhazip.com" mode=https output=user as-value]
+
+#IP v6
+:local resolvename [tool fetch url="https://ipv6.icanhazip.com" mode=https output=user as-value]
+
+#$resolvename is your IP
+#____________________________________________________
+
+#resolve name with CloudFlare API
+
+:local token "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+##record myphone IPV6
+:local myphone6 "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+##record myphone IPV6
+:local myphone4 "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+##record myphone IPV4
+:local zoneid "xxxxxxxxxxxxxxxxxxxxxxxxx"
+:local resolvename
+
+:set resolvename [/tool fetch http-method=get mode=https \
+url="https://api.cloudflare.com/client/v4/zones/$zoneid/dns_records/$myphone6" output=user as-value \
+http-header-field="Authorization: Bearer $token,Content-Type: application/json"]
+:set resolvename [:pick ($resolvename->"data") 0 ([:len ($resolvename->"data")]-1)]
+:set resolvename [:pick $resolvename [:find $resolvename "content"] [:find $resolvename "proxiable"]]
+:set resolvename [:pick $resolvename 10 ([:len $resolvename]-3)]
+
+#$resolvename is an IP
