@@ -5,12 +5,12 @@
 :local ttl "60"
 :local prox false
 
+# Get date & time for comment#
 :local date [/system clock get date]
 :local itime  [/system clock get time]
-             
 :local now "$date $itime"
 
-# Get System Identity #
+# Get System Identity for comment#
 :local SystemID [/system identity get name];
 
 
