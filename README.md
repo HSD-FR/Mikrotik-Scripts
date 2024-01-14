@@ -8,4 +8,4 @@
 
 # Here many scripts for Mirotik
 
-You can find help [here](https://pages.github.com/)
+You can find help [here]([https://pages.github.com](https://github.com/HSD-FR/Mikrotik-Scripts/wiki)https://github.com/HSD-FR/Mikrotik-Scripts/wiki/)
