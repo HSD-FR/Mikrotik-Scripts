@@ -26,7 +26,7 @@
 #define real current IP
 
 :global IP4FTTHNEW
-:local requestip [tool fetch url="https://text.ipv4.wtfismyip.com" mode=https output=user as-value]
+:local requestip [tool fetch url="https://ipv4.icanhazip.com" mode=https output=user as-value]
 :set IP4FTTHNEW [:pick ($requestip->"data") 0 ([:len ($requestip->"data")]-1)]
 
 #update cloudflare
@@ -56,7 +56,7 @@
 
 #define real current IP
 :global IP6FTTHNEW
-:local requestip6  [tool fetch url="https://text.ipv6.wtfismyip.com" mode=https output=user as-value];
+:local requestip6  [tool fetch url="https://ipv6.icanhazip.com" mode=https output=user as-value];
 :set IP6FTTHNEW [:pick ($requestip6->"data") 0 ([:len ($requestip6->"data")]-1)];
 
 #update cloudflare
