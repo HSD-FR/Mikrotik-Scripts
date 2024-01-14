@@ -1,5 +1,17 @@
 # Script to execute a command after receive an SMS
 #schedule this every 15 secondes
+#
+# send command to your router without space
+# ip -> send the router IP V4
+# ipv6 -> send the router IP V6#
+# capoff -> power down PoE port
+# capon -> power on PoE port
+# wolnas -> send magic packet
+# firewall -> execute a script
+# pingnas -> send the result of ping
+# reboot -> reboot the rooter
+# help or ? -> send menu
+
 
 :if ([/system script job print count-only where script="SMS2EXEC"] < 2) do={
 
