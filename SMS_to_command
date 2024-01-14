@@ -1,0 +1,103 @@
+# Script to execute a command after receive an SMS
+#schedule this every 15 secondes
+
+:if ([/system script job print count-only where script="SMS2EXEC"] < 2) do={
+
+:local number1 "+33xxxxxxxxx";
+:local smsPhone;
+:local smsTimeStamp;
+:local smsMessage;
+:local smsContent;
+
+
+# Get System Identity #
+:local SystemID [/system identity get name];
+
+/log info "SMS to Email script started"
+
+# loop through all the messages in the inbox #
+:foreach i in=[/tool sms inbox find] do={
+	/log info "SMS $i"
+	:set smsPhone [/tool sms inbox get $i phone];
+	:set smsTimeStamp [/tool sms inbox get $i timestamp];
+	:set smsMessage [/tool sms inbox get $i message];
+
+		:if ($smsPhone = $number1) do={
+
+      :		if ($smsMessage ="ip") do={
+				:local faiaddress [/ip cloud/get public-address];
+				:set smsContent "Router IP:\n$faiaddress";
+				/tool sms send port=usb2 phone-number=$number1 message=$smsContent channel=2
+			}
+      
+			:if ($smsMessage ="ipv6") do={
+				:local faiaddress6 [/ip cloud/get public-address-ipv6];
+				:set smsContent "Router IP:\n$faiaddress6";
+				/tool sms send port=usb2 phone-number=$number1 message=$smsContent channel=2
+			}
+      
+			:if ($smsMessage ="capoff") do={
+				/interface ethernet set poe-out=off ether5
+				:set smsContent "AP CAP Off";
+				/tool sms send port=usb2 phone-number=$number1 message=$smsContent channel=2
+			}
+      
+			:if ($smsMessage ="capon") do={
+				/interface ethernet set poe-out=auto-on ether5
+				:set smsContent "AP CAP On";
+				/tool sms send port=usb2 phone-number=$number1 message=$smsContent channel=2
+			}
+      
+			:if ($smsMessage ="wolnas") do={
+				/tool wol mac=00:11:32:CC:53:21 interface=ether1
+				:set smsContent "Magic Packet sent to MYNAS01";
+				/tool sms send port=usb2 phone-number=$number1 message=$smsContent channel=2
+			}
+      
+			:if ($smsMessage ="firewall") do={
+				 /system script run UPDATE-IP-IPHONE-FIREWALL
+				:set smsContent "Firewall updated";
+				/tool sms send port=usb2 phone-number=$number1 message=$smsContent channel=2
+			}
+      
+			:if ($smsMessage ="pingnas") do={
+				:local pingip;
+				:set pingip [/ping 192.168.1.3 count=4];
+				:if ($pingip = 4) do={
+					:set smsContent "Ping MYNAS01 OK";
+					/tool sms send port=usb2 phone-number=$number1 message=$smsContent channel=2
+				} else={
+					:set smsContent "Ping MYNAS01 KO";
+					/tool sms send port=usb2 phone-number=$number1 message=$smsContent channel=2
+				}
+			}
+      
+			:if ($smsMessage ="reboot") do={
+				:set smsContent "Reboot";
+				/tool sms send port=usb2 phone-number=$number1 message=$smsContent channel=2
+				/tool sms inbox remove $i
+				delay 10;
+				/system reboot
+			}
+      
+			:if ([:pick $smsMessage 0 3]  ="ip:") do={
+				:set smsContent "$ipiphone authorized";
+				 /ip firewall address-list set [find comment="ipiphone"] address=[:pick $smsMessage 3 32]
+				/tool sms send port=usb2 phone-number=$number1 message=$smsContent channel=2
+			}
+      
+			:if ($smsMessage ="help" || $smsMessage ="?") do={
+				:set smsContent "*** sms command ***\nip : \ncapoff : turn off all caps\ncapon : turn on all caps\nreboot : reboot router\nwolnas : boot MYNAS01\npingnas : ping MYNAS01";
+				/tool sms send port=usb2 phone-number=$number1 message=$smsContent channel=2
+			}
+      
+		}
+		:if ($smsPhone != $number1 && $smsMessage !="") do={
+		:set smsContent "Router ID: $SystemID\nSMS Received from: $smsPhone\nDate&Time: $smsTimeStamp\nMessage: $smsMessage";
+		/tool sms send port=usb2 phone-number=$number1 message=$smsContent channel=2
+		}
+		
+/tool sms inbox remove $i
+delay 2;
+}
+}
