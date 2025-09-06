@@ -1,0 +1,84 @@
+#Modify the interface name where you connect your ONU & the name on CustomDNSFree
+:local interfacePhysical "sfp1"
+:local CustomDNSFree "xxxxx.hd.free.fr"
+:local MACFree "FF:CC:EE:4B:2B:3A"
+
+:local interfaceInternet "vlan836-free"
+:local ipipv6 "ipipv6-free"
+:local ipv4Free "ipv4-free"
+
+delay 10s
+#add interface list WAN
+:if ([/interface list print count-only where name="WAN"]=0) do={
+	/interface list add name=WAN
+}
+#Cleanup list member orphans
+/interface list member remove [find where interface~"^\\*[0-9a-fA-F]{1,8}\$"]
+#add vlan 836
+:if ([/interface print count-only where name=$interfaceInternet]=0) do={
+  /interface ethernet set $interfacePhysical l2mtu=1796 mtu=1704 mac-address=$MACFree
+	/interface vlan add name=$interfaceInternet vlan-id=836 mtu=1700 interface=$interfacePhysical
+	/interface list member add interface=$interfaceInternet list=WAN
+}
+#add ipv6 address for ipipv6 tunnel
+:if ([/ipv6 address print count-only where comment="interfaceInternet2"]=0) do={
+	/ipv6 address add address="fd99::0ffff/128" interface="$interfaceInternet" advertise=no comment="interfaceInternet2"
+}
+#add FW rule
+:if ([ :len [/ipv6/firewall/filter/find where comment="Allow IPIPv6 tunnel on WAN" ]] = 0) do={
+  /ipv6 firewall filter add action=accept chain=input comment="Allow IPIPv6 tunnel on WAN" in-interface-list=WAN \
+	protocol=ipencap  place-before=*0
+}
+:if ([ :len [/ipv6/firewall/filter/find where comment="Allow dhcpv6 replies on WAN" ]] = 0) do={
+  /ipv6 firewall filter add action=accept chain=input comment="Allow dhcpv6 replies on WAN" dst-port=546 \
+	in-interface-list=WAN log=yes log-prefix="fw, a: allow6, r: aid, " protocol=udp src-address=fe80::/10 place-before=*0
+}
+#add ipv6 DHCP Client
+:if ([/ipv6 dhcp-client print count-only where comment="fibre-free"]=0) do={
+	/ipv6 dhcp-client
+	add add-default-route=yes comment="fibre-free" interface=$interfaceInternet pool-name="pool-freeV6" pool-prefix-length=60 request=address,prefix script="#Modify the \
+    CustomDNSFree\r\
+    \n:local CustomDNSFree \"$CustomDNSFree\"\r\
+    \n\r\
+    \n:local interfaceInternet \"$interfaceInternet\"\r\
+  	\n:local ipipv6 \"$ipipv6\"\r\
+    \n\r\
+    \n:local prefix [/ipv6 dhcp-client get [find interface=\$interfaceInternet] value-name=prefix]\r\
+    \n:set prefix ([:pick \$prefix 0 ([:find \$prefix \",\"]-3)])\r\
+    \n:local gw [/ipv6 dhcp-client get [find interface=\$interfaceInternet] value-name=address]\r\
+    \n:set gw ([:pick \$gw 0 ([:find \$gw \",\"])])\r\
+    \n:local addresse0ffff (([:pick \$prefix 0 ( [ :len \$prefix ] -1 )]) . \"0:ffff:ffff:0\")\r\
+    \n:local prefix2 (([:pick \$prefix 0 ( [ :len \$prefix ] -3 )]) . \"2::\")\r\
+    \n\r\
+    \n#remove the uggly IP\r\
+    \n/ipv6 address remove [find address=\"\$gw/128\"]\r\
+    \n#set ipv6 for forwarding ipipv6 tunnel\r\
+    \n/ipv6 address set [find comment=\"interfaceInternet2\"] address=\"\$addresse0ffff/128\" interface=\"\$interfaceInternet\" adver\
+    tise=no\r\
+    \n#set ip to the ipipv6 tunnel\r\
+    \n/interface ipipv6 set \$ipipv6 local-address=\$addresse0ffff\r\
+    \n#set IPV4 Free\r\
+    \n:local ipv4free [:resolve \$CustomDNSFree]\r\
+    \n/ip address set [find comment=\"ipv4-free\"] address=\$ipv4free network=\$ipv4free interface=\$ipipv6\r\
+    \n" use-interface-duid=yes use-peer-dns=no
+
+} else {
+	/ipv6 dhcp-client set [find comment="fibre-free"] interface=$interfaceInternet
+}
+#add ipipV6 tunnel
+:if ([/interface print count-only where name=$ipipv6]=0) do={
+	/interface ipipv6 add name=$ipipv6 remote-address=2a01:e00:29:200a::fffd local-address=fe80::1234 mtu=1500
+  /interface list member add interface=$ipipv6 list=WAN
+}
+#add ipv4 on ipipv6 interface
+:if ([/ip address print count-only where comment=$ipv4Free]=0) do={
+	/ip address add address=1.2.3.4 network=1.2.3.4 comment=$ipv4Free interface=$ipipv6
+}
+#add route ipv4 on ipipv6 interface
+:if ([/ip route print count-only where comment=$ipipv6]=0) do={
+	/ip route add dst-address=0.0.0.0/0 gateway=$ipipv6 comment=$ipipv6
+} else {
+  /ip route set [find comment=$ipipv6] gateway=$ipipv6
+}
+#
+/ipv6 dhcp-client release [find comment="fibre-free"]
